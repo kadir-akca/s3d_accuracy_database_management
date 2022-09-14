@@ -6,33 +6,42 @@ import os
 import sqlite3
 import subprocess
 import pandas as pd
+import pyodbc
 
 # URL of the database. Needs to be checked always when we change the PC, since we are local.
-db_url = 'C:/Users/shining3d/Desktop/s3d_db_management/db.db'
+db_path = 'C:/Users/shining3d/Desktop/s3d_db_management/db.db'
+db_driver = '{Microsoft Access Driver (*.mdb, *.accdb)}'
+conn_str = (rf'DRIVER={db_driver};'
+            rf'DBQ={db_path};')
+
+
+# Connect MS Access database
+def connect():
+    conn = pyodbc.connect(conn_str)
 
 
 # Open the database.
 def open_db():
     try:
-        os.startfile(db_url)
-        logging.info(f'Following database has been opened: {db_url}')
+        os.startfile(db_path)
+        logging.info(f'Following database has been opened: {db_path}')
     except subprocess.SubprocessError as e:
         print('Failed to open database', e)
-        logging.error(f'Following database could not be opened: {db_url}')
+        logging.error(f'Following database could not be opened: {db_path}')
 
 
 # Insert the experience to the database.
 def insert_experience(dev, op, dep, etype, artsn, certsn, sub, eid):
     try:
         if dev != '':
-            conn = sqlite3.connect(db_url)
+            conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
-            insert_query_with_param = """INSERT INTO experience("device_sn", "operator","department","experience_type","artefact_sn","certificate_sn", subject, experience_id) VALUES (?, ?, ?, ? ,?, ?, ?, ?)"""
+            insert_query_with_param = """INSERT INTO experience("device_sn", "operator","department",
+            "experience_type","artefact_sn","certificate_sn", subject, experience_id) VALUES (?, ?, ?, ? ,?, ?, ?, 
+            ?) """
             data = (dev, op, dep, etype, artsn, certsn, sub, eid)
             cursor.execute(insert_query_with_param, data)
             conn.commit()
-            global x
-            x = eid
             return cursor
         else:
             pass
@@ -46,7 +55,7 @@ def insert_content(content, experience_id):
     print(content, experience_id)
     try:
         if content != '':
-            conn = sqlite3.connect(db_url)
+            conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
             insert_query_with_param = """UPDATE experience SET content = ? WHERE experience_id = ?"""
             data = (content, experience_id)
@@ -64,7 +73,7 @@ def insert_content(content, experience_id):
 # Insert operator in database.
 def insert_operator(us, d):
     try:
-        conn = sqlite3.connect(db_url)
+        conn = sqlite3.connect(db_path)
         c = conn.cursor()
         insert_query_with_param = """INSERT INTO operator(name, "add_date") VALUES (?, ?)"""
         data = (us, d)
@@ -85,7 +94,7 @@ def insert_operator(us, d):
 
 # Check number of operators in order to see if a new operator is added or not.
 def check_operator_number():
-    conn = sqlite3.connect(db_url)
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("select * from operator")
     results = cursor.fetchall()
@@ -94,7 +103,7 @@ def check_operator_number():
 
 # Get the operators from database to list them in the first page.
 def get_operators():
-    conn = sqlite3.connect(db_url)
+    conn = sqlite3.connect(db_path)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     data = c.execute('SELECT name FROM operator').fetchall()
@@ -103,7 +112,7 @@ def get_operators():
 
 # Get the departments from database to list them in the first page.
 def get_departments():
-    conn = sqlite3.connect(db_url)
+    conn = sqlite3.connect(db_path)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     data = c.execute('SELECT name FROM department').fetchall()
@@ -112,7 +121,7 @@ def get_departments():
 
 # Get the experience types from database to list them in the first page.
 def get_experience_type():
-    conn = sqlite3.connect(db_url)
+    conn = sqlite3.connect(db_path)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     data = c.execute('SELECT experience_type FROM experience_type').fetchall()
@@ -122,7 +131,7 @@ def get_experience_type():
 
 # Get the artefact SNs from database to list them in the first page.
 def get_artefact_sn(etype):
-    conn = sqlite3.connect(db_url)
+    conn = sqlite3.connect(db_path)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     data = c.execute('SELECT artefact_sn FROM experience_type WHERE experience_type = ?', (etype,)).fetchall()
@@ -130,18 +139,18 @@ def get_artefact_sn(etype):
     return data
 
 
-def get_cert_sn(id):
-    conn = sqlite3.connect(db_url)
+def get_cert_sn(cert_sn):
+    conn = sqlite3.connect(db_path)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
-    data = c.execute('SELECT cert_sn FROM experience_type WHERE artefact_sn = ?', (id,)).fetchall()
+    data = c.execute('SELECT cert_sn FROM experience_type WHERE artefact_sn = ?', (cert_sn,)).fetchall()
 
     return data
 
 
 # Get the experience IDs from database to list them in the first page.
 def get_experience_id(dsn):
-    conn = sqlite3.connect(db_url)
+    conn = sqlite3.connect(db_path)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     data = c.execute('SELECT experience_id FROM experience WHERE device_sn = ?', (dsn,)).fetchall()
@@ -156,7 +165,7 @@ def get_experience_id(dsn):
 
 # Check if the new experience has been added succesfully
 def check_experience_id(expid):
-    conn = sqlite3.connect(db_url)
+    conn = sqlite3.connect(db_path)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     data = c.execute('SELECT experience_id FROM experience').fetchall()
@@ -166,7 +175,7 @@ def check_experience_id(expid):
 
 # Get the values by filtering with experience ID
 def get_attributes_from_experience_id(expid):
-    conn = sqlite3.connect(db_url)
+    conn = sqlite3.connect(db_path)
     c = conn.cursor()
     c.execute('SELECT * FROM experience WHERE experience_id = ?', (expid,))
     data = c.fetchone()
@@ -177,13 +186,8 @@ def get_attributes_from_experience_id(expid):
 # Create new table for BB300 artefact
 def create_table_BB300(url):
     df = pd.read_csv(url)
-    col = []
-    for c in df.columns:
-        col.append(c)
-    coldb = ' TEXT, '.join(col)
     conn = sqlite3.connect('db.db')
     cursor = conn.cursor()
-    # table = 'CREATE TABLE IF NOT EXISTS BB300 (' + coldb + ' TEXT)'
     cursor.execute(
         '''CREATE TABLE IF NOT EXISTS BB300(exp_ID,Name,dp0_tol,dp0_dev,dp0_ref,dp0_meas,dp0__of_points,dp1_tol,
         dp1_dev,dp1_ref,dp1_meas,dp1__of_points,lp_tol,lp_dev,lp_ref,lp_meas,lp__of_points)''')
@@ -256,7 +260,8 @@ def insert_table_BB500(data):
     for i in df_list:
         insert_query_with_param = "INSERT INTO BB500(exp_ID, Name, dp0_tol, dp0_dev, dp0_ref, dp0_meas, " \
                                   "dp0__of_points, dp1_tol, dp1_dev, dp1_ref, dp1_meas, dp1__of_points, lp_tol, " \
-                                  "lp_dev, lp_ref, lp_meas, lp__of_points, Date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+                                  "lp_dev, lp_ref, lp_meas, lp__of_points, Date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?," \
+                                  "?,?,?,?) "
         cursor.execute(insert_query_with_param, i)
         conn.commit()
 
@@ -293,7 +298,8 @@ def insert_table_BA500(data):
                                   "'01-08_Meas_Value','01-08__Of_Points','01-09_Tol','01-09_Dev','01-09_Ref_Value'," \
                                   "'01-09_Meas_Value','01-09__Of_Points','01-10_Tol','01-10_Dev','01-10_Ref_Value'," \
                                   "'01-10_Meas_Value','01-10__Of_Points','01-11_Tol','01-11_Dev','01-11_Ref_Value'," \
-                                  "'01-11_Meas_Value','01-11__Of_Points', 'Date') VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?," \
+                                  "'01-11_Meas_Value','01-11__Of_Points', 'Date') VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?," \
+                                  "?,?,?,?,?," \
                                   "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
         cursor.execute(insert_query_with_param, i)
         conn.commit()
