@@ -2,7 +2,7 @@ import os.path
 import tkinter as tk
 import xml.dom.minidom
 from datetime import datetime
-from tkinter import LEFT, ttk, END
+from tkinter import LEFT, ttk, END, messagebox
 import tkinter.filedialog as fd
 
 import pyperclip
@@ -44,8 +44,8 @@ class DatabaseManagement(tk.Frame):
         p1.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
         p2.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
 
-        button_first_page = tk.Button(button_frame, text='First Page', command=p1.show)
-        button_second_page = tk.Button(button_frame, text='Second Page', command=lambda: p2.show())
+        button_first_page = tk.Button(button_frame, text='New Experience', command=p1.show)
+        button_second_page = tk.Button(button_frame, text='Store Results', command=lambda: p2.show())
 
         button_open_db = tk.Button(button_frame, text='Open Database', command=lambda: open_db())
         button_quit_app = tk.Button(button_frame, text='Exit', command=lambda: methods.quit_app())
@@ -80,7 +80,7 @@ class PageClassOne(PageClass):
         self.filename = ''
 
         # Button, Entries, Labels
-        label = tk.Label(self, text='New Test Page', font=fonts.NORMAL_FONT)
+        label = tk.Label(self, text='New Experience', font=fonts.NORMAL_FONT)
         label.grid(row=0, column=0, pady=10, padx=10, sticky="NSEW", columnspan=3)
 
         self.entry_device_sn = tk.Entry(self)
@@ -124,7 +124,7 @@ class PageClassOne(PageClass):
         self.entry_experience_id = tk.Entry(self)
         self.entry_experience_id.grid(row=10, column=1, rowspan=2, padx=5, pady=5, ipadx=5, ipady=5, sticky="NSEW")
 
-        label_device_sn = tk.Label(self, text="Device SN:")
+        label_device_sn = tk.Label(self, text="Device Serial Number:")
         label_device_sn.grid(row=1, column=0)
         label_operator = tk.Label(self, text="Operator")
         label_operator.grid(row=2, column=0)
@@ -132,9 +132,9 @@ class PageClassOne(PageClass):
         label_department.grid(row=3, column=0)
         label_experience_type = tk.Label(self, text="Experience Type:")
         label_experience_type.grid(row=4, column=0)
-        label_artefact_type = tk.Label(self, text="Artefact SN:")
+        label_artefact_type = tk.Label(self, text="Artefact Serial No:")
         label_artefact_type.grid(row=5, column=0)
-        label_certificate_sn = tk.Label(self, text="Certificate SN:")
+        label_certificate_sn = tk.Label(self, text="Certificate No:")
         label_certificate_sn.grid(row=6, column=0)
         label_subject = tk.Label(self, text="Subject:")
         label_subject.grid(row=7, column=0)
@@ -158,7 +158,7 @@ class PageClassOne(PageClass):
         button_add_operator = tk.Button(self, text='Add operator', command=lambda: self.add_operator())
         button_add_operator.grid(row=2, column=2, padx=5, pady=5, sticky="NSEW")
 
-        self.button_reset = tk.Button(self, command=lambda: self.reset_fields(), text='Reset all')
+        self.button_reset = tk.Button(self, command=lambda: self.reset_fields(), text='Reset All')
         self.button_reset.grid(row=12, column=0, columnspan=3, padx=5, pady=5, sticky="NSEW")
 
     # Method: insert entries to database
@@ -182,6 +182,7 @@ class PageClassOne(PageClass):
             else:
                 logging.info('Experience already exist')
             self.button_create_experience.config(state='disabled')
+
         except:
             print('Failed to insert experience in database')
             logging.error('Failed to insert experience in database')
@@ -243,76 +244,77 @@ class PageClassOne(PageClass):
     def generate_experience_id(self):
         dev = str(self.entry_device_sn.get())
         if dev == '':
-            print('Device SN not defined')
             logging.error('Generate experience id failed, device sn not specified.')
             print('Failed, experience ID has not been generated!')
-        elif dev[:8] == 'FreeScan':
-            dev = dev[8:]
-            months = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
-            now = datetime.now()
-            str_mth = now.strftime('%m').lstrip("0")
-            month = months[int(str_mth) - 1]
-            year = now.strftime('%y')
-            e = 'FS-' + dev + '-' + year + month
-            last_experience_id = database.get_experience_id(self.entry_device_sn.get())
-            if last_experience_id == 'no experience':
-                id1 = '1000'
-                e = str(e) + id1
-            else:
-                id2 = int(last_experience_id[-4:]) + 1
-                e = str(e) + str(id2)
-            self.entry_experience_id.insert(0, e)
-            self.entry_experience_id.config(state='disabled')
-            # self.b_generate_experience_id.config(state='disabled')
-            global g_experience_id
-            g_experience_id = e
-            logging.info(f'Experience id has been generated: {g_experience_id}')
-            print('Done, experience ID for FreeScan product has been generated! ', e)
-        elif dev[:7] == 'EinScan':
-            dev = dev[7:]
-            months = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
-            now = datetime.now()
-            str_mth = now.strftime('%m').lstrip("0")
-            month = months[int(str_mth) - 1]
-            year = now.strftime('%y')
-            e = 'ES-' + dev + '-' + year + month
-            last_experience_id = database.get_experience_id(self.entry_device_sn.get())
-            if last_experience_id == 'no experience':
-                id1 = '1000'
-                e = str(e) + id1
-            else:
-                print(last_experience_id)
-                id2 = int(last_experience_id[-4:]) + 1
-                e = str(e) + str(id2)
-            self.entry_experience_id.insert(0, e)
-            self.entry_experience_id.config(state='disabled')
-            # self.b_generate_experience_id.config(state='disabled')
-            g_experience_id = e
-            logging.info(f'Experience id has been generated: {g_experience_id}')
-            print('Done, experience ID for EinScan product has been generated! ', e)
+            messagebox.showerror("Error", "The device serial number field is empty!\n\nAn experience ID could not be generated.")
         else:
-            months = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
-            now = datetime.now()
-            str_mth = now.strftime('%m').lstrip("0")
-            month = months[int(str_mth) - 1]
-            year = now.strftime('%y')
-            e = dev + '-' + year + month
-            last_experience_id = database.get_experience_id(self.entry_device_sn.get())
-            if last_experience_id == 'no experience':
-                id1 = '1000'
-                e = str(e) + id1
+            if dev[:8] == 'FreeScan':
+                dev = dev[8:]
+                months = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+                now = datetime.now()
+                str_mth = now.strftime('%m').lstrip("0")
+                month = months[int(str_mth) - 1]
+                year = now.strftime('%y')
+                e = 'FS-' + dev + '-' + year + month
+                last_experience_id = database.get_experience_id(self.entry_device_sn.get())
+                if last_experience_id == 'no experience':
+                    id1 = '1000'
+                    e = str(e) + id1
+                else:
+                    id2 = int(last_experience_id[-4:]) + 1
+                    e = str(e) + str(id2)
+                self.entry_experience_id.insert(0, e)
+                self.entry_experience_id.config(state='disabled')
+                # self.b_generate_experience_id.config(state='disabled')
+                global g_experience_id
+                g_experience_id = e
+                logging.info(f'Experience id has been generated: {g_experience_id}')
+                print('Done, experience ID for FreeScan product has been generated! ', e)
+            elif dev[:7] == 'EinScan':
+                dev = dev[7:]
+                months = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+                now = datetime.now()
+                str_mth = now.strftime('%m').lstrip("0")
+                month = months[int(str_mth) - 1]
+                year = now.strftime('%y')
+                e = 'ES-' + dev + '-' + year + month
+                last_experience_id = database.get_experience_id(self.entry_device_sn.get())
+                if last_experience_id == 'no experience':
+                    id1 = '1000'
+                    e = str(e) + id1
+                else:
+                    print(last_experience_id)
+                    id2 = int(last_experience_id[-4:]) + 1
+                    e = str(e) + str(id2)
+                self.entry_experience_id.insert(0, e)
+                self.entry_experience_id.config(state='disabled')
+                # self.b_generate_experience_id.config(state='disabled')
+                g_experience_id = e
+                logging.info(f'Experience id has been generated: {g_experience_id}')
+                print('Done, experience ID for EinScan product has been generated! ', e)
             else:
-                print(last_experience_id)
-                id2 = int(last_experience_id[-4:]) + 1
-                e = str(e) + str(id2)
-            self.entry_experience_id.insert(0, e)
-            self.entry_experience_id.config(state='disabled')
-            # self.b_generate_experience_id.config(state='disabled')
-            g_experience_id = e
-            logging.info(f'Experience id has been generated: {g_experience_id}')
-            print('Done, experience ID for an other product has been generated! ', e)
-
-        self.db_insert_experience()
+                months = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+                now = datetime.now()
+                str_mth = now.strftime('%m').lstrip("0")
+                month = months[int(str_mth) - 1]
+                year = now.strftime('%y')
+                e = dev + '-' + year + month
+                last_experience_id = database.get_experience_id(self.entry_device_sn.get())
+                if last_experience_id == 'no experience':
+                    id1 = '1000'
+                    e = str(e) + id1
+                else:
+                    print(last_experience_id)
+                    id2 = int(last_experience_id[-4:]) + 1
+                    e = str(e) + str(id2)
+                self.entry_experience_id.insert(0, e)
+                self.entry_experience_id.config(state='disabled')
+                # self.b_generate_experience_id.config(state='disabled')
+                g_experience_id = e
+                logging.info(f'Experience id has been generated: {g_experience_id}')
+                print('Done, experience ID for an other product has been generated! ', e)
+            self.db_insert_experience()
+            messagebox.showinfo("Database Management", "The following experience ID has been generated:\n\n\t%s" % g_experience_id)
 
     # Insert values to entries from xml file
     def insert_to_entries(self, x, y, z, t, r):
@@ -342,8 +344,14 @@ class PageClassOne(PageClass):
             op = elements[1].childNodes[0].nodeValue
             artsn = elements[4].childNodes[0].nodeValue
             self.insert_to_entries(dev, etype, dep, op, artsn)
+            messagebox.showinfo("Info", "XML correctly uploaded!\n\n\tDevice Serial Number:\t%s \n\tOperator:\t\t%s "
+                                        "\n\tDepartment:\t\t%s \n\tExperience Type:\t\t%s \n\tArtefact Number:\t\t%s" % (
+                                dev, op, dep, etype, artsn))
+            print('XML correctly uploaded!\n\t%s \n\t%s \n\t%s \n\t%s \n\t%s' % (dev, etype, dep, op, artsn))
         except:
-            print('XML file not selected!')
+            print("XML file not selected.\n\t\tSelected file:\n\t%s" % g_xml_url)
+            messagebox.showwarning("Info",
+                                   "XML file not selected.\n\t\nSelected file:\n\t%s\n\nPlease select an XML file!" % g_xml_url)
 
     # Reset all entries
     def reset_fields(self):
@@ -360,11 +368,12 @@ class PageClassOne(PageClass):
         # self.b_generate_experience_id.config(state='normal')
         self.button_create_experience.config(state='normal')
         self.button_copy.config(state='normal')
-        logging.info('Page has been reset.')
 
     def copy_experience_id(self):
-        pyperclip.copy(self.entry_experience_id.get())
-        self.button_copy.config(state='disabled')
+        if self.entry_experience_id.get() != "":
+            pyperclip.copy(self.entry_experience_id.get())
+        else:
+            messagebox.showerror("Database Management", "Nothing to copy!")
 
 
 # Page two
@@ -382,7 +391,7 @@ class PageClassTwo(PageClass):
         self.cxproj_data = None
 
         # Buttons, entries, labels
-        label_title = tk.Label(self, text='New Test Page', font=fonts.NORMAL_FONT)
+        label_title = tk.Label(self, text='Generate XML and Store Results', font=fonts.NORMAL_FONT)
         label_title.grid(row=0, column=0, pady=5, padx=5, ipadx=5, ipady=5, sticky="NSEW", columnspan=3)
 
         self.label_experience_id = tk.Label(self, text="ExperienceID:")
@@ -394,7 +403,7 @@ class PageClassTwo(PageClass):
         button_paste = tk.Button(self, command=lambda: self.paste_experience_id(), text='Paste')
         button_paste.grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky="NSEW")
 
-        b_copy = tk.Button(self, command=lambda: pyperclip.copy(g_experience_id), text='Copy Experience ID')
+        b_copy = tk.Button(self, command=lambda: self.copy_experience_id(), text='Copy Experience ID')
         b_copy.grid(row=2, column=2, padx=5, pady=5, ipadx=5, ipady=5, sticky="NSEW")
 
         button_save_xml = tk.Button(self, command=lambda: methods.generate_xml(self.entry_experience_id.get()),
@@ -427,7 +436,7 @@ class PageClassTwo(PageClass):
         separator_1 = ttk.Separator(self, orient='horizontal')
         separator_1.grid(row=8, column=1, padx=5, pady=10, sticky="NSEW")
 
-        button_select_csv = tk.Button(self, command=lambda: self.select_csv(), text='Select CSV files')
+        button_select_csv = tk.Button(self, command=lambda: self.select_csv(), text='Select CSV file')
         button_select_csv.grid(row=9, column=0, padx=5, pady=5, sticky="NSEW")
 
         self.label_selected_csv_str = tk.StringVar()
@@ -446,10 +455,15 @@ class PageClassTwo(PageClass):
                                         text='Save Content')
         button_save_content.grid(row=10, column=2, padx=5, pady=5, sticky="NSEW")
 
+    def copy_experience_id(self):
+        if self.entry_experience_id.get() != "":
+            pyperclip.copy(self.entry_experience_id.get())
+        else:
+            messagebox.showerror("Database Management", "Nothing to copy!")
+
     # Paste the experience ID
     def paste_experience_id(self):
         self.entry_experience_id.insert(0, g_experience_id)
-        self.entry_experience_id.config(state='disabled')
 
     # Select CSV files to be merged and uploaded in database
     def select_csv(self):
@@ -460,6 +474,7 @@ class PageClassTwo(PageClass):
         label = os.path.basename(self.csv_url)
         self.label_selected_csv_str.set(label)
         logging.info('Following CSV file is chosen: ' + label)
+        print(self.csv_url)
 
     # Field that will be done in future
     '''def select_cxproj(self):
@@ -503,5 +518,5 @@ if __name__ == '__main__':
     main = DatabaseManagement(root)
     main.pack(side='top', fill='both', expand=True)
     root.wm_title('Database Management Tool for Accuracy Tests')
-    root.wm_geometry("350x600")
+    root.wm_geometry("380x600")
     root.mainloop()

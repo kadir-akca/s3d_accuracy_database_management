@@ -7,13 +7,17 @@ import platform
 import time
 import xml.dom.minidom
 from datetime import datetime
+from tkinter import messagebox
+
 import database
 
 
 # Quit the application.
 def quit_app():
     logging.info('Application has been closed.')
-    quit()
+    msgbox = messagebox.askquestion('Database Management', 'Are you sure you want to exit the application?', icon='warning')
+    if msgbox == 'yes':
+        quit()
 
 
 # Generate a new XML file from the entries.

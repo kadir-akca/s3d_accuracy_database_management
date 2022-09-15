@@ -5,11 +5,15 @@ import logging
 import os
 import sqlite3
 import subprocess
+from tkinter import messagebox
+
 import pandas as pd
 import pyodbc
 
 # URL of the database. Needs to be checked always when we change the PC, since we are local.
 db_path = 'C:/Users/shining3d/Desktop/s3d_db_management/db.db'
+
+# URL of the MS Access. Will be done in the future.
 db_driver = '{Microsoft Access Driver (*.mdb, *.accdb)}'
 conn_str = (rf'DRIVER={db_driver};'
             rf'DBQ={db_path};')
@@ -54,17 +58,23 @@ def insert_experience(dev, op, dep, etype, artsn, certsn, sub, eid):
 def insert_content(content, experience_id):
     print(content, experience_id)
     try:
-        if content != '':
+        if content != '\n' and experience_id != '':
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
             insert_query_with_param = """UPDATE experience SET content = ? WHERE experience_id = ?"""
             data = (content, experience_id)
             cursor.execute(insert_query_with_param, data)
             conn.commit()
-
-            return cursor
+            messagebox.showinfo("Database Management",
+                                "The following content has been added succesfully to this experience ID:%s\n\n\t"
+                                "%s" % (experience_id, content))
         else:
-            pass
+            if content == "\n" and experience_id == '':
+                messagebox.showerror("Database Management", "Nothing to add to the database!\n\nContent is empty and experience ID has not been found.")
+            elif experience_id == '':
+                messagebox.showerror("Database Management","Nothing to add to the database!\n\nExperience ID is not found.")
+            elif content == "\n":
+                messagebox.showerror("Database Management", "Nothing to add to the database!\n\nContent is empty.")
     except sqlite3.Error as e:
         logging.error('Experience has not been added to database')
         print('Failed to insert accuracy test in database', e)
@@ -183,72 +193,48 @@ def get_attributes_from_experience_id(expid):
     return data
 
 
-# Create new table for BB300 artefact
-def create_table_BB300(url):
-    df = pd.read_csv(url)
-    conn = sqlite3.connect('db.db')
-    cursor = conn.cursor()
-    cursor.execute(
-        '''CREATE TABLE IF NOT EXISTS BB300(exp_ID,Name,dp0_tol,dp0_dev,dp0_ref,dp0_meas,dp0__of_points,dp1_tol,
-        dp1_dev,dp1_ref,dp1_meas,dp1__of_points,lp_tol,lp_dev,lp_ref,lp_meas,lp__of_points)''')
-    conn.commit()
-
-
-# Create new table for BB300 artefact
-def create_table_BA500():
-    conn = sqlite3.connect('db.db')
-    cursor = conn.cursor()
-    cursor.execute(
-        '''CREATE TABLE IF NOT EXISTS BA500(experiment_ID,Name,'01-02_Tol','01-02_Dev','01-02_Ref_Value',
-        '01-02_Meas_Value','01-02__Of_Points','01-03_Tol','01-03_Dev','01-03_Ref_Value','01-03_Meas_Value',
-        '01-03__Of_Points','01-04_Tol','01-04_Dev','01-04_Ref_Value','01-04_Meas_Value','01-04__Of_Points',
-        '01-05_Tol','01-05_Dev','01-05_Ref_Value','01-05_Meas_Value','01-05__Of_Points','01-06_Tol','01-06_Dev',
-        '01-06_Ref_Value','01-06_Meas_Value','01-06__Of_Points','01-07_Tol','01-07_Dev','01-07_Ref_Value',
-        '01-07_Meas_Value','01-07__Of_Points','01-08_Tol','01-08_Dev','01-08_Ref_Value','01-08_Meas_Value',
-        '01-08__Of_Points','01-09_Tol','01-09_Dev','01-09_Ref_Value','01-09_Meas_Value','01-09__Of_Points',
-        '01-10_Tol','01-10_Dev','01-10_Ref_Value','01-10_Meas_Value','01-10__Of_Points','01-11_Tol','01-11_Dev',
-        '01-11_Ref_Value','01-11_Meas_Value','01-11__Of_Points')''')
-    conn.commit()
-
-
 # Select the table where the merged CSV will be inserted
 def insert_table_select(url):
-    conn = sqlite3.connect('db.db')
-    cursor = conn.cursor()
-    df = pd.read_csv(url)
-    df_list = df.values.tolist()
-    cursor.execute('SELECT experience_type FROM experience WHERE experience_id = ?', (df_list[0][0],))
-    artsn = cursor.fetchone()
-    artsn = artsn[0]
-    if artsn == 'Ball-bar 300':
-        cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS BB300('Date',exp_ID, Name, dp0_tol, dp0_dev, dp0_ref, dp0_meas, 
-                dp0__of_points, dp1_tol, dp1_dev, dp1_ref, dp1_meas, dp1__of_points, lp_tol, lp_dev, lp_ref, lp_meas, 
-                lp__of_points)''')
-        insert_table_BB300(url)
-        print('inserted to BB300')
-    elif artsn == 'Ball-bar 500':
-        cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS BB300('Date',exp_ID, Name, dp0_tol, dp0_dev, dp0_ref, dp0_meas, 
-                dp0__of_points, dp1_tol, dp1_dev, dp1_ref, dp1_meas, dp1__of_points, lp_tol, lp_dev, lp_ref, lp_meas, 
-                lp__of_points)''')
-        insert_table_BB500(url)
-        print('inserted to BB500')
-    elif artsn == 'BallArray500':
-        cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS BA500('Date', experiment_ID,Name,'01-02_Tol','01-02_Dev','01-02_Ref_Value',
-                '01-02_Meas_Value','01-02__Of_Points','01-03_Tol','01-03_Dev','01-03_Ref_Value','01-03_Meas_Value',
-                '01-03__Of_Points','01-04_Tol','01-04_Dev','01-04_Ref_Value','01-04_Meas_Value','01-04__Of_Points',
-                '01-05_Tol','01-05_Dev','01-05_Ref_Value','01-05_Meas_Value','01-05__Of_Points','01-06_Tol','01-06_Dev',
-                '01-06_Ref_Value','01-06_Meas_Value','01-06__Of_Points','01-07_Tol','01-07_Dev','01-07_Ref_Value',
-                '01-07_Meas_Value','01-07__Of_Points','01-08_Tol','01-08_Dev','01-08_Ref_Value','01-08_Meas_Value',
-                '01-08__Of_Points','01-09_Tol','01-09_Dev','01-09_Ref_Value','01-09_Meas_Value','01-09__Of_Points',
-                '01-10_Tol','01-10_Dev','01-10_Ref_Value','01-10_Meas_Value','01-10__Of_Points','01-11_Tol','01-11_Dev',
-                '01-11_Ref_Value','01-11_Meas_Value','01-11__Of_Points')''')
-        insert_table_BA500(url)
-        print('inserted to BA500')
-    else:
-        print('exp type not found')
+    try:
+        conn = sqlite3.connect('db.db')
+        cursor = conn.cursor()
+        df = pd.read_csv(url)
+        df_list = df.values.tolist()
+        cursor.execute('SELECT experience_type FROM experience WHERE experience_id = ?', (df_list[0][0],))
+        arts = cursor.fetchone()
+        arts = arts[0]
+        if arts == 'Ball-bar 300':
+            cursor.execute(
+                '''CREATE TABLE IF NOT EXISTS BB300('Date',exp_ID, Name, dp0_tol, dp0_dev, dp0_ref, dp0_meas, 
+                    dp0__of_points, dp1_tol, dp1_dev, dp1_ref, dp1_meas, dp1__of_points, lp_tol, lp_dev, lp_ref, lp_meas, 
+                    lp__of_points)''')
+            insert_table_BB300(url)
+            print('inserted to BB300')
+        elif arts == 'Ball-bar 500':
+            cursor.execute(
+                '''CREATE TABLE IF NOT EXISTS BB300('Date',exp_ID, Name, dp0_tol, dp0_dev, dp0_ref, dp0_meas, 
+                    dp0__of_points, dp1_tol, dp1_dev, dp1_ref, dp1_meas, dp1__of_points, lp_tol, lp_dev, lp_ref, lp_meas, 
+                    lp__of_points)''')
+            insert_table_BB500(url)
+            print('inserted to BB500')
+        elif arts == 'BallArray500':
+            cursor.execute(
+                '''CREATE TABLE IF NOT EXISTS BA500('Date', experiment_ID,Name,'01-02_Tol','01-02_Dev','01-02_Ref_Value',
+                    '01-02_Meas_Value','01-02__Of_Points','01-03_Tol','01-03_Dev','01-03_Ref_Value','01-03_Meas_Value',
+                    '01-03__Of_Points','01-04_Tol','01-04_Dev','01-04_Ref_Value','01-04_Meas_Value','01-04__Of_Points',
+                    '01-05_Tol','01-05_Dev','01-05_Ref_Value','01-05_Meas_Value','01-05__Of_Points','01-06_Tol','01-06_Dev',
+                    '01-06_Ref_Value','01-06_Meas_Value','01-06__Of_Points','01-07_Tol','01-07_Dev','01-07_Ref_Value',
+                    '01-07_Meas_Value','01-07__Of_Points','01-08_Tol','01-08_Dev','01-08_Ref_Value','01-08_Meas_Value',
+                    '01-08__Of_Points','01-09_Tol','01-09_Dev','01-09_Ref_Value','01-09_Meas_Value','01-09__Of_Points',
+                    '01-10_Tol','01-10_Dev','01-10_Ref_Value','01-10_Meas_Value','01-10__Of_Points','01-11_Tol','01-11_Dev',
+                    '01-11_Ref_Value','01-11_Meas_Value','01-11__Of_Points')''')
+            insert_table_BA500(url)
+            print('inserted to BA500')
+        else:
+            print('exp type not found')
+    except:
+        messagebox.showwarning("Warning",
+                               "Error with sending data to the database!\n\nPlease check if the Experience ID is correct.")
 
 
 # Insert datas from the merged CSV in BB300 table
@@ -264,6 +250,7 @@ def insert_table_BB500(data):
                                   "?,?,?,?) "
         cursor.execute(insert_query_with_param, i)
         conn.commit()
+    messagebox.showinfo("Message", "Inserted to BB500 table successfully.\n\n".join([str(x) for x in df_list]))
 
 
 def insert_table_BB300(data):
@@ -278,6 +265,7 @@ def insert_table_BB300(data):
                                   "?,?,?,?) "
         cursor.execute(insert_query_with_param, i)
         conn.commit()
+    messagebox.showinfo("Message", "Inserted to BB300 table successfully.\n\n".join([str(x) for x in df_list]))
 
 
 # Insert datas from the merged CSV in BA500 table
@@ -303,3 +291,4 @@ def insert_table_BA500(data):
                                   "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
         cursor.execute(insert_query_with_param, i)
         conn.commit()
+        messagebox.showinfo("Message", "Inserted to BA500 table successfully.\n\n".join([str(x) for x in df_list]))
