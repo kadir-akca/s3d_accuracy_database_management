@@ -22,7 +22,7 @@ def quit_app():
 
 # Generate a new XML file from the entries.
 def generate_xml(exp):
-    file = xml.dom.minidom.parse('data.xml')
+    file = xml.dom.minidom.parse('write_xml/data.xml')
     x1 = file.getElementsByTagName('AutoTextCustomFieldValue')
     print('exp', exp)
     data = database.get_attributes_from_experience_id(exp)
@@ -33,21 +33,6 @@ def generate_xml(exp):
     x1[3].childNodes[0].nodeValue = data[3]
     x1[4].childNodes[0].nodeValue = data[4]
 
-    with open("test_write_xml/" + exp + '.xml',
+    with open("write_xml/" + exp + '.xml',
               "w") as xml_template:
         file.writexml(xml_template)
-
-
-def creation_date(path_to_file):
-    if platform.system() == 'Windows':
-        return time.ctime(os.path.getctime(path_to_file))
-    else:
-        stat = os.stat(path_to_file)
-        try:
-            x = stat.st_birthtime
-            y = datetime.fromtimestamp(x)
-            return y
-        except AttributeError:
-            # We're probably on Linux. No easy way to get creation dates here,
-            # so we'll settle for when its content was last modified.
-            return stat.st_mtime
