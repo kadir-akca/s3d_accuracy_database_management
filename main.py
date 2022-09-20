@@ -111,19 +111,21 @@ class PageClassOne(PageClass):
         self.cbb_artefact_type.bind('<<ComboboxSelected>>', self.cbb_list_certificate_numbers)
         self.cbb_artefact_type.grid(row=5, column=1, columnspan=2, padx=5, pady=5, ipadx=5, ipady=5, sticky="NSEW")
         self.cbb_artefact_type['state'] = 'readonly'
-        self.cbb_artefact_type.config(state='normal')
 
         self.cbb_certificate_sn_str = tk.StringVar()
         self.cbb_certificate_sn = ttk.Combobox(self, textvariable=self.cbb_certificate_sn_str)
         self.cbb_certificate_sn.grid(row=6, column=1, padx=5, columnspan=2, pady=5, ipadx=5, ipady=5, sticky="NSEW")
         self.cbb_certificate_sn['state'] = 'readonly'
-        self.cbb_certificate_sn.config(state='normal')
 
         self.text_subject = tk.Text(self, width=20, height=3)
         self.text_subject.grid(row=7, column=1, columnspan=2, padx=5, pady=7, ipadx=5, ipady=5, sticky="NSEW")
 
         self.entry_experience_id = tk.Entry(self)
         self.entry_experience_id.grid(row=10, column=1, rowspan=2, padx=5, pady=5, ipadx=5, ipady=5, sticky="NSEW")
+
+        self.label_log_str = tk.StringVar()
+        self.label_log = tk.Label(self, textvariable=self.label_log_str, text='csv')
+        self.label_log.grid(row=13, column=0, columnspan=3, padx=5, pady=5, sticky="NSEW")
 
         label_device_sn = tk.Label(self, text="Device Serial Number:")
         label_device_sn.grid(row=1, column=0)
@@ -162,8 +164,13 @@ class PageClassOne(PageClass):
         self.button_reset = tk.Button(self, command=lambda: self.reset_fields(), text='Reset All')
         self.button_reset.grid(row=12, column=0, columnspan=3, padx=5, pady=5, sticky="NSEW")
 
+    def generate_log(self, log):
+        '''old_log = self.label_log_str.get()
+        new_log = old_log + '\n\n' + log'''
+        self.label_log_str.set(log)
+
     # Method: insert entries to database
-    def db_insert_experience(self):
+    def insert_experience_to_database(self):
         try:
             device_sn = self.entry_device_sn.get()
             operator = self.cbb_operator_str.get()
@@ -181,6 +188,7 @@ class PageClassOne(PageClass):
             else:
                 logging.info('Experience already exist')
             self.button_create_experience.config(state='disabled')
+
 
         except:
             print('Failed to insert experience in database')
@@ -223,53 +231,54 @@ class PageClassOne(PageClass):
         self.add_operator_check(x)
         self.cbb_operator.config(values=database.get_operators())'''
 
-    def add_ops(self):
-        USER_INP = simpledialog.askstring(title=application_title,
-                                          prompt="Enter new operator:\n\t\t\t\t\t")
-
-    # Dynamic refresh in list of artefactsn
+    # Dynamic refresh of the fields
     def cbb_list_operators(self, *args):
-        self.cbb_operator.config(values=['ss'])
+        #self.cbb_operator.config(values=['ss'])
         department = self.cbb_department_str.get()
-        self.cbb_operator.set('')
+        #self.cbb_operator.set('')
         operators = database.get_operators(department)
-        self.cbb_operator.config(state='normal')
+        self.cbb_operator.config(state='readonly')
         self.cbb_operator.config(values=operators)
 
     def cbb_list_artefact_types(self, *args):
-        self.cbb_artefact_type.config(values=[])
+        #self.cbb_artefact_type.config(values=[])
         m = self.cbb_experience_type_str.get()
-        self.cbb_artefact_type.set('')
+        #self.cbb_artefact_type.set('')
         n = database.get_artefact_types(m)
-        self.cbb_artefact_type.config(state='normal')
+        self.cbb_artefact_type.config(state='readonly')
         self.cbb_artefact_type.config(values=n)
 
-    # Dynamic refresh in list of artefactsn
     def cbb_list_certificate_numbers(self, *args):
-        self.cbb_certificate_sn.config(values=[])
+        #self.cbb_certificate_sn.config(values=[])
         m = self.cbb_artefact_type_str.get()
-        self.cbb_certificate_sn.set('')
+        #self.cbb_certificate_sn.set('')
         n = database.get_certificate_nos(m)
-        self.cbb_certificate_sn.config(state='normal')
+        self.cbb_certificate_sn.config(state='readonly')
         self.cbb_certificate_sn.config(values=n)
 
     # Generate an experience id based on device SN and date
     def generate_experience_id(self):
-        dev = str(self.entry_device_sn.get())
-        if dev == '':
+        device_sn = str(self.entry_device_sn.get())
+        experience_type = str(self.cbb_experience_type.get())
+        if device_sn == '':
             logging.error('Generate experience id failed, device sn not specified.')
             print('Failed, experience ID has not been generated!')
             messagebox.showerror("Error",
                                  "The device serial number field is empty!\n\nAn experience ID could not be generated.")
+        elif experience_type == '':
+            logging.error('Generate experience id failed, experience type not specified.')
+            print('Failed, experience ID has not been generated!')
+            messagebox.showerror("Error",
+                                 "The experience type field is empty!\n\nAn experience ID could not be generated.")
         else:
-            if dev[:8] == 'FreeScan':
-                dev = dev[8:]
+            if device_sn[:8] == 'FreeScan':
+                device_sn = device_sn[8:]
                 months = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
                 now = datetime.now()
                 str_mth = now.strftime('%m').lstrip("0")
                 month = months[int(str_mth) - 1]
                 year = now.strftime('%y')
-                e = 'FS-' + dev + '-' + year + month
+                e = 'FS-' + device_sn + '-' + year + month
                 last_experience_id = database.get_experience_id(self.entry_device_sn.get())
                 if last_experience_id == 'no experience':
                     id1 = '1000'
@@ -284,14 +293,14 @@ class PageClassOne(PageClass):
                 g_experience_id = e
                 logging.info(f'Experience id has been generated: {g_experience_id}')
                 print('Done, experience ID for FreeScan product has been generated! ', e)
-            elif dev[:7] == 'EinScan':
-                dev = dev[7:]
+            elif device_sn[:7] == 'EinScan':
+                device_sn = device_sn[7:]
                 months = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
                 now = datetime.now()
                 str_mth = now.strftime('%m').lstrip("0")
                 month = months[int(str_mth) - 1]
                 year = now.strftime('%y')
-                e = 'ES-' + dev + '-' + year + month
+                e = 'ES-' + device_sn + '-' + year + month
                 last_experience_id = database.get_experience_id(self.entry_device_sn.get())
                 if last_experience_id == 'no experience':
                     id1 = '1000'
@@ -312,7 +321,7 @@ class PageClassOne(PageClass):
                 str_mth = now.strftime('%m').lstrip("0")
                 month = months[int(str_mth) - 1]
                 year = now.strftime('%y')
-                e = dev + '-' + year + month
+                e = device_sn + '-' + year + month
                 last_experience_id = database.get_experience_id(self.entry_device_sn.get())
                 if last_experience_id == 'no experience':
                     id1 = '1000'
@@ -327,19 +336,21 @@ class PageClassOne(PageClass):
                 g_experience_id = e
                 logging.info(f'Experience id has been generated: {g_experience_id}')
                 print('Done, experience ID for an other product has been generated! ', e)
-            self.db_insert_experience()
+            self.insert_experience_to_database()
             messagebox.showinfo("Database Management",
                                 "The following experience ID has been generated:\n\n\t%s" % g_experience_id)
-        t = PageClassTwo()
-        PageClassTwo.set_g_exp(t)
+            self.generate_log('The experience id has been generated and sent the database:\n\n\t %s' % g_experience_id)
 
     # Insert values to entries from xml file
-    def insert_to_entries(self, x, y, z, t, r):
-        self.entry_device_sn.insert(0, x)
-        self.cbb_experience_type_str.set(y)
-        self.cbb_department_str.set(z)
-        self.cbb_operator_str.set(t)
-        self.cbb_artefact_type.set(r)
+    def insert_to_entries(self, device_sn, department, operator, experience_type, artefact_type):
+        self.entry_device_sn.insert(0, device_sn)
+        self.cbb_experience_type_str.set(experience_type)
+        self.cbb_department_str.set(department)
+        self.cbb_operator_str.set(operator)
+        self.cbb_artefact_type.set(artefact_type)
+        self.cbb_list_operators()
+        self.cbb_list_artefact_types()
+        self.cbb_list_certificate_numbers()
         logging.info(
             f'Following fields are filled with XML: {self.entry_device_sn.get()}, {self.cbb_experience_type_str.get()}, {self.cbb_department_str.get()}, {self.cbb_operator_str.get()}, {self.cbb_artefact_type.get()}')
 
@@ -355,22 +366,28 @@ class PageClassOne(PageClass):
                 filetypes=(('XML files', '*.xml'), ('All files', '*.*')))
             file = xml.dom.minidom.parse(g_xml_url)
             elements = file.getElementsByTagName('AutoTextCustomFieldValue')
-            dev = elements[2].childNodes[0].nodeValue
-            etype = elements[3].childNodes[0].nodeValue
-            dep = elements[0].childNodes[0].nodeValue
-            op = elements[1].childNodes[0].nodeValue
-            artsn = elements[4].childNodes[0].nodeValue
-            self.insert_to_entries(dev, etype, dep, op, artsn)
-            messagebox.showinfo("Info", "XML correctly uploaded!\n\n\tDevice Serial Number:\t%s \n\tOperator:\t\t%s "
-                                        "\n\tDepartment:\t\t%s \n\tExperience Type:\t\t%s \n\tArtefact Number:\t\t%s" % (
-                                    dev, op, dep, etype, artsn))
-            print('XML correctly uploaded!\n\t%s \n\t%s \n\t%s \n\t%s \n\t%s' % (dev, etype, dep, op, artsn))
+            #experience_id = elements[2].childNodes[0].nodeValue
+            device_sn = elements[2].childNodes[0].nodeValue
+            department = elements[0].childNodes[0].nodeValue
+            operator = elements[1].childNodes[0].nodeValue
+            experience_type = elements[3].childNodes[0].nodeValue
+            artefact_type = elements[4].childNodes[0].nodeValue
+
+            print(device_sn,department,operator,experience_type,artefact_type)
+            self.insert_to_entries(device_sn, department, operator, experience_type, artefact_type)
+            messagebox.showinfo("Info", "XML correctly uploaded!\n\n\tDevice Serial Number:\t%s \n\tDepartment:\t\t%s "
+                                        "\n\tOperator:\t\t%s \n\tExperience Type:\t\t%s \n\tArtefact Type:\t\t%s" % (
+                                    device_sn, department, operator, experience_type, artefact_type))
+            print('XML correctly uploaded!\n\t%s \n\t%s \n\t%s \n\t%s \n\t%s' % (device_sn, department, operator, experience_type, artefact_type))
+            self.generate_log("XML correctly uploaded!\n\n\tDevice Serial Number:\t%s \n\tDepartment:\t\t%s "
+                              "\n\tOperator:\t\t%s \n\tExperience Type:\t\t%s \n\tArtefact Type:\t\t%s" % (
+                                  device_sn, department, operator, experience_type, artefact_type))
         except:
             print("XML file not selected.\n\t\tSelected file:\n\t%s" % g_xml_url)
             messagebox.showwarning("Info",
                                    "XML file not selected.\n\t\nSelected file:\n\t%s\n\nPlease select an XML file!" % g_xml_url)
 
-    # Reset all entries
+    # Reset all entries.
     def reset_fields(self):
         self.entry_device_sn.config(state='normal')
         self.cbb_operator_str.set('')
@@ -385,12 +402,16 @@ class PageClassOne(PageClass):
         # self.b_generate_experience_id.config(state='normal')
         self.button_create_experience.config(state='normal')
         self.button_copy.config(state='normal')
+        self.generate_log('All entries have been reset!')
 
+    # Copy experience id.
     def copy_experience_id(self):
         if self.entry_experience_id.get() != "":
             pyperclip.copy(self.entry_experience_id.get())
+            self.generate_log('Experience id copied!')
         else:
-            messagebox.showerror("Database Management", "Nothing to copy!")
+            messagebox.showerror(application_title, "Nothing to copy!")
+            self.generate_log('Nothing to copy!')
 
 
 # Page two
@@ -400,12 +421,10 @@ class PageClassTwo(PageClass):
         PageClass.__init__(self, *args, **kwargs)
 
         # Variables
-        self.entry_experience_id = None
+        self.cbb_experience_id = None
         self.asc_date = None
         self.csv_url = None
         self.csv = None
-        self.asc_data = None
-        self.cxproj_data = None
 
         # Buttons, entries, labels
         label_title = tk.Label(self, text='Generate XML and Store Results', font=fonts.NORMAL_FONT)
@@ -414,17 +433,19 @@ class PageClassTwo(PageClass):
         self.label_experience_id = tk.Label(self, text="ExperienceID:")
         self.label_experience_id.grid(row=1, column=0, padx=5, pady=5, ipadx=5, ipady=5, sticky="NSEW")
 
-        self.v = tk.StringVar(master=self)
-        self.entry_experience_id = tk.Entry(self, textvariable=self.v)
-        self.entry_experience_id.grid(row=1, column=1, columnspan=2, padx=5, pady=5, sticky="NSEW")
+        self.cbb_experience_id_str = tk.StringVar()
+        self.cbb_experience_id = ttk.Combobox(self, textvariable=self.cbb_experience_id_str)
+        self.cbb_experience_id.grid(row=1, column=1, columnspan=2, padx=5, pady=5, sticky="NSEW")
+        self.cbb_experience_id.config(state='normal')
+        self.cbb_experience_id.config(values=self.cbb_list_experience_ids())
 
-        button_paste = tk.Button(self, command=lambda: self.paste_experience_id(), text='Paste')
+        button_paste = tk.Button(self, command=lambda: self.paste_experience_id(), text='Paste and Update List')
         button_paste.grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky="NSEW")
 
-        b_copy = tk.Button(self, command=lambda: self.copy_experience_id(), text='Copy Experience ID')
+        b_copy = tk.Button(self, command=lambda: self.copy_experience_id(), text='Copy')
         b_copy.grid(row=2, column=2, padx=5, pady=5, ipadx=5, ipady=5, sticky="NSEW")
 
-        button_save_xml = tk.Button(self, command=lambda: methods.generate_xml(self.entry_experience_id.get()),
+        button_save_xml = tk.Button(self, command=lambda: methods.generate_xml(self.cbb_experience_id.get()),
                                     text='Save XML')
         button_save_xml.grid(row=3, column=0, columnspan=3, padx=5, pady=5, sticky="NSEW")
 
@@ -452,42 +473,47 @@ class PageClassTwo(PageClass):
         b_start_batch.grid(row=5, column=3, rowspan=3, padx=5, pady=5, ipadx=5, ipady=2, sticky="NSEW")
 '''
         separator_1 = ttk.Separator(self, orient='horizontal')
-        separator_1.grid(row=8, column=1, padx=5, pady=10, sticky="NSEW")
+        separator_1.grid(row=8, column=0, columnspan=3, padx=5, pady=10, sticky="NSEW")
 
         button_select_csv = tk.Button(self, command=lambda: self.select_csv(), text='Select CSV file')
-        button_select_csv.grid(row=9, column=0, padx=5, pady=5, sticky="NSEW")
+        button_select_csv.grid(row=9, column=0, columnspan=3, padx=5, pady=5, sticky="NSEW")
+
+        self.label_selected_csv = tk.Label(self, text='Selected CSV file: ')
+        self.label_selected_csv.grid(row=10, column=0, padx=5, pady=5, sticky="NSEW")
 
         self.label_selected_csv_str = tk.StringVar()
-        self.label_selected_csv = tk.Label(self, textvariable=self.label_selected_csv_str, text='csv')
-        self.label_selected_csv.grid(row=9, column=1, padx=5, pady=5, sticky="NSEW")
+        self.label_selected_csv_dyn = tk.Label(self, textvariable=self.label_selected_csv_str)
+        self.label_selected_csv_dyn.grid(row=10, column=1, columnspan=2, padx=5, pady=5, sticky="NSEW")
 
-        button_save_csv_results = tk.Button(self, command=lambda: database.insert_table_select(self.csv_url),
-                                            text='Send to Database')
-        button_save_csv_results.grid(row=9, column=2, padx=5, pady=5, sticky="NSEW")
+        self.label_content = tk.Label(self, text='Content: ')
+        self.label_content.grid(row=11, column=0, padx=5, pady=5, sticky="NSEW")
 
-        self.text_content = tk.Text(self, width=20, height=3)
-        self.text_content.grid(row=10, column=0, columnspan=2, padx=5, pady=7, ipadx=5, ipady=5, sticky="NSEW")
+        self.text_content = tk.Text(self, width=20, height=2)
+        self.text_content.grid(row=11, column=1, columnspan=2, padx=5, pady=5, ipadx=5, ipady=5, sticky="NSEW")
 
-        button_save_content = tk.Button(self, command=lambda: database.insert_content(self.text_content.get('1.0', END),
-                                                                                      g_experience_id),
-                                        text='Save Content')
-        button_save_content.grid(row=10, column=2, padx=5, pady=5, sticky="NSEW")
+        self.button_save_csv_content = tk.Button(self, command=lambda: self.store_csv_and_content(),
+                                                 text='Store CSV and Content')
+        self.button_save_csv_content.grid(row=12, column=0, columnspan=3, padx=5, pady=5, sticky="NSEW")
 
-    def set_g_exp(self):
-        print(g_experience_id)
-        self.v.set(g_experience_id)
-        # self.entry_experience_id.insert(0, str(g_experience_id))
-        print('setted')
+        self.label_log_str = tk.StringVar()
+        self.label_log = tk.Label(self, textvariable=self.label_log_str, text='csv')
+        self.label_log.grid(row=13, column=0, columnspan=3, padx=5, pady=5, sticky="NSEW")
+
+    def cbb_list_experience_ids(self, *args):
+        self.cbb_experience_id.set('')
+        experience_ids = database.get_experience_ids()
+        return experience_ids
 
     def copy_experience_id(self):
-        if self.entry_experience_id.get() != "":
-            pyperclip.copy(self.entry_experience_id.get())
+        if self.cbb_experience_id.get() != "":
+            pyperclip.copy(self.cbb_experience_id.get())
         else:
             messagebox.showerror("Database Management", "Nothing to copy!")
 
     # Paste the experience ID
     def paste_experience_id(self):
-        self.entry_experience_id.insert(0, g_experience_id)
+        self.cbb_experience_id.config(values=self.cbb_list_experience_ids())
+        self.cbb_experience_id.set(g_experience_id)
 
     # Select CSV files to be merged and uploaded in database
     def select_csv(self):
@@ -499,6 +525,15 @@ class PageClassTwo(PageClass):
         self.label_selected_csv_str.set(label)
         logging.info('Following CSV file is chosen: ' + label)
         print(self.csv_url)
+
+    def store_csv_and_content(self):
+        database.insert_table_select(self.csv_url)
+        database.insert_content(self.text_content.get('1.0', END), self.cbb_experience_id.get())
+
+    def generate_log(self, log):
+        '''old_log = self.label_log_str.get()
+        new_log = old_log + '\n\n' + log'''
+        self.label_log_str.set(log)
 
     # Field that will be done in future
     '''def select_cxproj(self):
@@ -542,5 +577,5 @@ if __name__ == '__main__':
     main = DatabaseManagement(root)
     main.pack(side='top', fill='both', expand=True)
     root.wm_title('Database Management Tool for Accuracy Tests')
-    root.wm_geometry("380x600")
+    root.wm_geometry("380x800")
     root.mainloop()

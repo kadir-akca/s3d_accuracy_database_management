@@ -13,11 +13,6 @@ import main
 
 # URL of the database. Needs to be checked always when we change the PC, since we are local.
 db_path = 'db.db'
-query_insert_into = 'INSERT INTO '
-query_values = ' VALUES '
-table_experience_column = '''experiences ("experience_id","device_sn", "operator_id","department_id",
-            "experience_type_id","artefact_type_id","certificate_number_id","subject")'''
-query_param = '(?, ?, ?, ? ,?, ?, ?, ?)'
 
 
 # Open the database.
@@ -31,8 +26,26 @@ def open_db():
             print('Failed to open database', e)
             logging.error(f'Following database could not be opened: {db_path}')
     elif check_process_running is True:
-        messagebox.showerror(main.application_title,
-                             "Tool is already running.")
+        messagebox.showerror(main.application_title, "Tool is already running.")
+        logging.error(f'Database application is already running: {db_path}')
+
+
+def get_ids(department, operator, experience_type, artefact_type, certificate_no):
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = lambda cursor, row: row[0]
+    c = conn.cursor()
+    department_id = c.execute('SELECT department_id FROM departments WHERE department = ?', (department,)).fetchone()
+    operator_id = c.execute('SELECT operator_id FROM operators WHERE operator = ?', (operator,)).fetchone()
+    experience_type_id = c.execute('SELECT experience_type_id FROM experience_types WHERE experience_type = ?',
+                                   (experience_type,)).fetchone()
+    artefact_type_id = c.execute('SELECT artefact_type_id FROM artefact_types WHERE artefact_type = ?',
+                                 (artefact_type,)).fetchone()
+    certificate_no_id = c.execute('SELECT certificate_no_id FROM certificate_nos WHERE certificate_no = ?',
+                                  (certificate_no,)).fetchone()
+    data = [department_id, operator_id, experience_type_id, artefact_type_id, certificate_no_id]
+    print('get id succ')
+
+    return data
 
 
 def search_last_id(table):
@@ -47,13 +60,22 @@ def search_last_id(table):
 
 
 # Insert the experience to the database.
-def insert_experience(device_sn, operator, department, experience_type, artefact_type, certificate_sn, subject, experience_id):
+def insert_experience(device_sn, operator, department, experience_type, artefact_type, certificate_no, subject,
+                      experience_id):
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        query = query_insert_into + table_experience_column + query_values + query_param
-        data = (experience_id, device_sn, operator, department, experience_type, artefact_type, certificate_sn, subject)
-        cursor.execute(query, data)
+        insert_query_with_param = '''INSERT INTO experiences ("experience_id","device_sn","department_id", "operator_id",
+            "experience_type_id","artefact_type_id","certificate_number_id","subject") VALUES (?, ?, ?, ? ,?, ?, ?, ?)'''
+        department_id, operator_id, experience_type_id, artefact_type_id, certificate_no_id = get_ids(department,
+                                                                                                      operator,
+                                                                                                      experience_type,
+                                                                                                      artefact_type,
+                                                                                                      certificate_no)
+        data = (
+        experience_id, device_sn, department_id, operator_id, experience_type_id, artefact_type_id, certificate_no_id,
+        subject)
+        cursor.execute(insert_query_with_param, data)
         conn.commit()
     except sqlite3.Error as e:
         logging.error('Experience has not been added to database')
@@ -168,6 +190,14 @@ def get_experience_id(device_sn):
         return data[-1]
 
 
+def get_experience_ids():
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = lambda cursor, row: row[0]
+    c = conn.cursor()
+    data = c.execute('SELECT experience_id FROM experiences ORDER BY experience_id DESC').fetchall()
+    return data
+
+
 # Check if the new experience has been added successfully
 def check_experience_id(experience_id):
     conn = sqlite3.connect(db_path)
@@ -179,12 +209,35 @@ def check_experience_id(experience_id):
 
 
 # Get the values by filtering with experience ID
-def get_attributes_from_experience_id(expid):
+def get_attributes_from_experience_id(experience_id):
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    c.execute('SELECT * FROM experiences WHERE experience_id = ?', (expid,))
-    data = c.fetchone()
-    print('data', data)
+    device_sn = c.execute('SELECT device_sn FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[0]
+    department_id = \
+    c.execute('SELECT department_id FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[0]
+    operator_id = c.execute('SELECT operator_id FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[
+        0]
+    experience_type_id = \
+    c.execute('SELECT experience_type_id FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[0]
+    artefact_type_id = \
+    c.execute('SELECT artefact_type_id FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[0]
+    certificate_no_id = \
+    c.execute('SELECT certificate_number_id FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[0]
+
+    department = \
+    next(c.execute('SELECT department FROM departments WHERE department_id = ?', (department_id,)), [None])[0]
+    operator = next(c.execute('SELECT operator FROM operators WHERE operator_id = ?', (operator_id,)), [None])[0]
+    experience_type = \
+    next(c.execute('SELECT experience_type FROM experience_types WHERE experience_type_id = ?', (experience_type_id,)),
+         [None])[0]
+    artefact_type = \
+    next(c.execute('SELECT artefact_type FROM artefact_types WHERE artefact_type_id = ?', (artefact_type_id,)), [None])[
+        0]
+    certificate_no = \
+    next(c.execute('SELECT certificate_no FROM certificate_nos WHERE certificate_no_id = ?', (certificate_no_id,)),
+         [None])[0]
+
+    data = [experience_id, device_sn, department, operator, experience_type, artefact_type, certificate_no]
     return data
 
 
@@ -205,7 +258,7 @@ def insert_table_select(url):
                     dp0__of_points, dp1_tol, dp1_dev, dp1_ref, dp1_meas, dp1__of_points, lp_tol, lp_dev, lp_ref, lp_meas, 
                     lp__of_points, 'date')''')
             insert_table_BB300(url)
-            print('inserted to BB300')
+            print('Inserted to BB300')
         elif arts == 'Ball-bar 500':
             cursor.execute(
                 '''CREATE TABLE IF NOT EXISTS BB300(experience_id, filename, dp0_tol, dp0_dev, dp0_ref, dp0_meas, 
