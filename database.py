@@ -8,11 +8,11 @@ import subprocess
 from tkinter import messagebox
 import pandas as pd
 import psutil
-
 import main
 
 # URL of the database. Needs to be checked always when we change the PC, since we are local.
-db_path = 'db.db'
+path_database = 'db.db'
+application_title = 'S3D Accuracy Test Database Management'
 
 
 # Open the database.
@@ -20,18 +20,16 @@ def open_db():
     check_process_running = "DB Browser for SQLite.exe" in (p.name() for p in psutil.process_iter())
     if check_process_running is False:
         try:
-            os.startfile(db_path)
-            logging.info(f'Following database has been opened: {db_path}')
+            os.startfile(path_database)
+            print('Database: Successfully opened!')
         except subprocess.SubprocessError as e:
-            print('Failed to open database', e)
-            logging.error(f'Following database could not be opened: {db_path}')
+            print('Database: Failed to open database!', e)
+            messagebox.showerror(main.application_title, "Database: Failed to open database!")
     elif check_process_running is True:
         messagebox.showerror(main.application_title, "Tool is already running.")
-        logging.error(f'Database application is already running: {db_path}')
-
 
 def get_ids(department, operator, experience_type, artefact_type, certificate_no):
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(path_database)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     department_id = c.execute('SELECT department_id FROM departments WHERE department = ?', (department,)).fetchone()
@@ -43,27 +41,14 @@ def get_ids(department, operator, experience_type, artefact_type, certificate_no
     certificate_no_id = c.execute('SELECT certificate_no_id FROM certificate_nos WHERE certificate_no = ?',
                                   (certificate_no,)).fetchone()
     data = [department_id, operator_id, experience_type_id, artefact_type_id, certificate_no_id]
-    print('get id succ')
-
     return data
-
-
-def search_last_id(table):
-    try:
-        connection = sqlite3.connect(db_path)
-        cursor = connection.cursor()
-        last_id = cursor.execute('SELECT MAX(id) FROM %s' % table).fetchall()[0][0]
-        connection.commit()
-        return last_id
-    except sqlite3.Error as err:
-        print(f"Error: '{err}'")
 
 
 # Insert the experience to the database.
 def insert_experience(device_sn, operator, department, experience_type, artefact_type, certificate_no, subject,
                       experience_id):
     try:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(path_database)
         cursor = conn.cursor()
         insert_query_with_param = '''INSERT INTO experiences ("experience_id","device_sn","department_id", "operator_id",
             "experience_type_id","artefact_type_id","certificate_number_id","subject") VALUES (?, ?, ?, ? ,?, ?, ?, ?)'''
@@ -73,56 +58,20 @@ def insert_experience(device_sn, operator, department, experience_type, artefact
                                                                                                       artefact_type,
                                                                                                       certificate_no)
         data = (
-        experience_id, device_sn, department_id, operator_id, experience_type_id, artefact_type_id, certificate_no_id,
-        subject)
+            experience_id, device_sn, department_id, operator_id, experience_type_id, artefact_type_id,
+            certificate_no_id,
+            subject)
         cursor.execute(insert_query_with_param, data)
         conn.commit()
-    except sqlite3.Error as e:
-        logging.error('Experience has not been added to database')
-        print('Failed to insert accuracy test in database', e)
-
-
-# Insert the experience to the database.
-def insert_content(content, experience_id):
-    print(content, experience_id)
-    try:
-        if content != '\n' and experience_id != '':
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            insert_query_with_param = """UPDATE experiences SET content = ? WHERE experience_id = ?"""
-            data = (content, experience_id)
-            cursor.execute(insert_query_with_param, data)
-            conn.commit()
-            messagebox.showinfo(main.application_title,
-                                "The following content has been added successfully to this experience ID:%s\n\n\t"
-                                "%s" % (experience_id, content))
-        else:
-            if content == "\n" and experience_id == '':
-                messagebox.showerror(main.application_title,
-                                     "Nothing to add to the database!\n\nContent is empty and experience ID has not been found.")
-            elif experience_id == '':
-                messagebox.showerror(main.application_title,
-                                     "Nothing to add to the database!\n\nExperience ID is not found.")
-            elif content == "\n":
-                messagebox.showerror(main.application_title, "Nothing to add to the database!\n\nContent is empty.")
-    except sqlite3.Error as e:
-        logging.error('Experience has not been added to database')
-        print('Failed to insert accuracy test in database', e)
-
-
-# Check number of operators in order to see if a new operator is added or not.
-def check_operator_id():
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM operator")
-    results = cursor.fetchall()
-    last_id = len(results)
-    return last_id
+        print('Insert Experience: Successfully inserted to database!')
+    except:
+        print('Insert Experience: Failed to insert to database!')
+        messagebox.showerror(application_title,'Insert Experience: Failed to insert to database!')
 
 
 # Get the operators from database to list them in the first page.
 def get_operators(department):
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(path_database)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     department_id = c.execute('SELECT department_id FROM departments WHERE department = ?', (department,)).fetchone()
@@ -133,7 +82,7 @@ def get_operators(department):
 
 # Get the departments from database to list them in the first page.
 def get_departments():
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(path_database)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     data = c.execute('SELECT department FROM departments').fetchall()
@@ -143,7 +92,7 @@ def get_departments():
 
 # Get the experience types from database to list them in the first page.
 def get_experience_types():
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(path_database)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     data = c.execute('SELECT experience_type FROM experience_types').fetchall()
@@ -153,7 +102,7 @@ def get_experience_types():
 
 # Get the artefact SNs from database to list them in the first page.
 def get_artefact_types(experience_type):
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(path_database)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     experience_type_id = c.execute('SELECT experience_type_id FROM experience_types WHERE experience_type = ?',
@@ -165,7 +114,7 @@ def get_artefact_types(experience_type):
 
 
 def get_certificate_nos(artefact_type):
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(path_database)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     artefact_type_id = c.execute('SELECT artefact_type_id FROM artefact_types WHERE artefact_type = ?',
@@ -177,21 +126,18 @@ def get_certificate_nos(artefact_type):
 
 # Get the experience IDs from database to list them in the first page.xxx
 def get_experience_id(device_sn):
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(path_database)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     data = c.execute('SELECT experience_id FROM experiences WHERE device_sn = ?', (device_sn,)).fetchall()
     if len(data) == 0:
-        print('Previous experience not found for the following serial number: ', device_sn)
         return 'no experience'
     else:
-        print('Previous experience has been found for the following serial number: ', device_sn,
-              "\n\t Previous experience is: ", data[-1])
         return data[-1]
 
 
 def get_experience_ids():
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(path_database)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     data = c.execute('SELECT experience_id FROM experiences ORDER BY experience_id DESC').fetchall()
@@ -200,7 +146,7 @@ def get_experience_ids():
 
 # Check if the new experience has been added successfully
 def check_experience_id(experience_id):
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(path_database)
     conn.row_factory = lambda cursor, row: row[0]
     c = conn.cursor()
     data = c.execute('SELECT experience_id FROM experiences').fetchall()
@@ -210,134 +156,189 @@ def check_experience_id(experience_id):
 
 # Get the values by filtering with experience ID
 def get_attributes_from_experience_id(experience_id):
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    device_sn = c.execute('SELECT device_sn FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[0]
-    department_id = \
-    c.execute('SELECT department_id FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[0]
-    operator_id = c.execute('SELECT operator_id FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[
-        0]
-    experience_type_id = \
-    c.execute('SELECT experience_type_id FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[0]
-    artefact_type_id = \
-    c.execute('SELECT artefact_type_id FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[0]
-    certificate_no_id = \
-    c.execute('SELECT certificate_number_id FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[0]
+    try:
+        conn = sqlite3.connect(path_database)
+        c = conn.cursor()
+        device_sn = c.execute('SELECT device_sn FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[
+            0]
+        department_id = \
+            c.execute('SELECT department_id FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[0]
+        operator_id = \
+            c.execute('SELECT operator_id FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[
+                0]
+        experience_type_id = \
+            c.execute('SELECT experience_type_id FROM experiences WHERE experience_id = ?',
+                      (experience_id,)).fetchone()[0]
+        artefact_type_id = \
+            c.execute('SELECT artefact_type_id FROM experiences WHERE experience_id = ?', (experience_id,)).fetchone()[
+                0]
+        certificate_no_id = \
+            c.execute('SELECT certificate_number_id FROM experiences WHERE experience_id = ?',
+                      (experience_id,)).fetchone()[
+                0]
 
-    department = \
-    next(c.execute('SELECT department FROM departments WHERE department_id = ?', (department_id,)), [None])[0]
-    operator = next(c.execute('SELECT operator FROM operators WHERE operator_id = ?', (operator_id,)), [None])[0]
-    experience_type = \
-    next(c.execute('SELECT experience_type FROM experience_types WHERE experience_type_id = ?', (experience_type_id,)),
-         [None])[0]
-    artefact_type = \
-    next(c.execute('SELECT artefact_type FROM artefact_types WHERE artefact_type_id = ?', (artefact_type_id,)), [None])[
-        0]
-    certificate_no = \
-    next(c.execute('SELECT certificate_no FROM certificate_nos WHERE certificate_no_id = ?', (certificate_no_id,)),
-         [None])[0]
+        department = \
+            next(c.execute('SELECT department FROM departments WHERE department_id = ?', (department_id,)), [None])[0]
+        operator = next(c.execute('SELECT operator FROM operators WHERE operator_id = ?', (operator_id,)), [None])[0]
+        experience_type = \
+            next(c.execute('SELECT experience_type FROM experience_types WHERE experience_type_id = ?',
+                           (experience_type_id,)),
+                 [None])[0]
+        artefact_type = \
+            next(c.execute('SELECT artefact_type FROM artefact_types WHERE artefact_type_id = ?', (artefact_type_id,)),
+                 [None])[
+                0]
+        certificate_no = \
+            next(c.execute('SELECT certificate_no FROM certificate_nos WHERE certificate_no_id = ?',
+                           (certificate_no_id,)),
+                 [None])[0]
 
-    data = [experience_id, device_sn, department, operator, experience_type, artefact_type, certificate_no]
-    return data
+        data = [experience_id, device_sn, department, operator, experience_type, artefact_type, certificate_no]
+        return data
+    except:
+        print('error')
 
 
 # Select the table where the merged CSV will be inserted
-def insert_table_select(url):
+def select_table_to_insert(path_csv_file, experience_id):
     try:
-        conn = sqlite3.connect('db.db')
-        cursor = conn.cursor()
-        df = pd.read_csv(url)
-        df_list = df.values.tolist()
-        cursor.execute('SELECT experience_type_id FROM experiences WHERE experience_id = ?', (df_list[0][0],))
-        arts = cursor.fetchone()
-        arts = arts[0]
-        print(arts)
-        if arts == 'Ball-bar 300':
-            cursor.execute(
-                '''CREATE TABLE IF NOT EXISTS BB300(experience_id, filename, dp0_tol, dp0_dev, dp0_ref, dp0_meas, 
-                    dp0__of_points, dp1_tol, dp1_dev, dp1_ref, dp1_meas, dp1__of_points, lp_tol, lp_dev, lp_ref, lp_meas, 
-                    lp__of_points, 'date')''')
-            insert_table_BB300(url)
-            print('Inserted to BB300')
-        elif arts == 'Ball-bar 500':
-            cursor.execute(
-                '''CREATE TABLE IF NOT EXISTS BB300(experience_id, filename, dp0_tol, dp0_dev, dp0_ref, dp0_meas, 
-                    dp0__of_points, dp1_tol, dp1_dev, dp1_ref, dp1_meas, dp1__of_points, lp_tol, lp_dev, lp_ref, lp_meas, 
-                    lp__of_points, 'date')''')
-            insert_table_BB500(url)
-            print('inserted to BB500')
-        elif arts == 'BallArray500':
-            cursor.execute(
-                '''CREATE TABLE IF NOT EXISTS BA500(experience_id, filename,'01-02_Tol','01-02_Dev','01-02_Ref_Value',
-                    '01-02_Meas_Value','01-02__Of_Points','01-03_Tol','01-03_Dev','01-03_Ref_Value','01-03_Meas_Value',
-                    '01-03__Of_Points','01-04_Tol','01-04_Dev','01-04_Ref_Value','01-04_Meas_Value','01-04__Of_Points',
-                    '01-05_Tol','01-05_Dev','01-05_Ref_Value','01-05_Meas_Value','01-05__Of_Points','01-06_Tol','01-06_Dev',
-                    '01-06_Ref_Value','01-06_Meas_Value','01-06__Of_Points','01-07_Tol','01-07_Dev','01-07_Ref_Value',
-                    '01-07_Meas_Value','01-07__Of_Points','01-08_Tol','01-08_Dev','01-08_Ref_Value','01-08_Meas_Value',
-                    '01-08__Of_Points','01-09_Tol','01-09_Dev','01-09_Ref_Value','01-09_Meas_Value','01-09__Of_Points',
-                    '01-10_Tol','01-10_Dev','01-10_Ref_Value','01-10_Meas_Value','01-10__Of_Points','01-11_Tol','01-11_Dev',
-                    '01-11_Ref_Value','01-11_Meas_Value','01-11__Of_Points', 'date')''')
-            insert_table_BA500(url)
-            print('inserted to BA500')
+        conn = sqlite3.connect(path_database)
+        c = conn.cursor()
+        df = pd.read_csv(path_csv_file)
+        print(df)
+        df_col_list = []
+        for col in df.columns:
+            df_col_list.append(col)
+        column_string = ''
+        print('df col list::', df_col_list)
+        for col in df_col_list:
+            column_string = column_string + '''"''' + col + '''"''' + ' TEXT, '
+        column_string = column_string[:-2]
+        print('colstr:', column_string)
+        experience_type_id = c.execute('SELECT experience_type_id FROM experiences WHERE experience_id = ?',
+                                       (experience_id,)).fetchone()
+        print(experience_type_id)
+        experience_type = c.execute('SELECT experience_type FROM experience_types WHERE experience_type_id = ?',
+                                    (experience_type_id[0],)).fetchone()
+        print(experience_type)
+        experience_type = experience_type[0]
+        if experience_type == 'BB300':
+            print('testp1')
+            c.execute('CREATE TABLE IF NOT EXISTS csv_bb300 (' + column_string + ')')
+            print('testp2')
+            insert_data_to_table_BB300(path_csv_file)
+        elif experience_type == 'BB500':
+            c.execute('CREATE TABLE IF NOT EXISTS csv_bb500 (' + column_string + ')')
+            insert_data_to_table_BB500(path_csv_file)
+        elif experience_type == 'BA500':
+            c.execute('CREATE TABLE IF NOT EXISTS csv_ba500 (' + column_string + ')')
+            insert_data_to_table_BA500(path_csv_file)
         else:
-            print('exp type not found')
-    except:
-        messagebox.showwarning("Warning",
-                               "Error with sending data to the database!\n\nPlease check if the Experience ID is correct.")
+            print('Store CSV: Failed! Experience type not found!')
+            messagebox.showwarning(application_title, 'Store CSV: Failed! Experience type not found!')
+    except sqlite3.Error:
+        print('Store CSV: Failed to send data to database!')
+        messagebox.showwarning(application_title, "Store CSV: Failed to send data to database!\n\n"
+                                                  "Please check if the Experience ID is correct.")
 
 
 # Insert datas from the merged CSV in BB300 table
-def insert_table_BB500(data):
-    conn = sqlite3.connect('db.db')
-    cursor = conn.cursor()
-    df = pd.read_csv(data)
-    df_list = df.values.tolist()
-    for i in df_list:
-        insert_query_with_param = "INSERT INTO BB500(exp_ID, Name, dp0_tol, dp0_dev, dp0_ref, dp0_meas, " \
-                                  "dp0__of_points, dp1_tol, dp1_dev, dp1_ref, dp1_meas, dp1__of_points, lp_tol, " \
-                                  "lp_dev, lp_ref, lp_meas, lp__of_points, Date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?," \
-                                  "?,?,?,?) "
-        cursor.execute(insert_query_with_param, i)
-        conn.commit()
-    messagebox.showinfo("Message", "Inserted to BB500 table successfully.\n\n".join([str(x) for x in df_list]))
+def insert_data_to_table_BB300(path_csv_file):
+    try:
+        conn = sqlite3.connect(path_database)
+        c = conn.cursor()
+        df = pd.read_csv(path_csv_file)
+        df_col_list = []
+        for col in df.columns:
+            df_col_list.append(col)
+        column_string = ''
+        for col in df_col_list:
+            column_string = column_string + '''"''' + col + '''"''' + ', '
+        column_string = column_string[:-2]
+        values_string = '?,' * len(df_col_list)
+        values_string = values_string[:-1]
+        df_list = df.values.tolist()
+        for i in df_list:
+            c.execute("INSERT INTO csv_bb300(" + column_string + ") VALUES (" + values_string + ")", i)
+            conn.commit()
+        print("Insert Data: Successfully inserted to BB300 table!\n\n")
+        messagebox.showinfo(application_title, "Insert Data: Successfully inserted to BB300 table!\n\n")
+    except:
+        print("Insert Data: Failed to insert to BB300 table!")
+        messagebox.showerror(application_title, "Insert Data: Failed to insert to BB300 table!\n\n")
 
 
-def insert_table_BB300(data):
-    conn = sqlite3.connect('db.db')
-    cursor = conn.cursor()
-    df = pd.read_csv(data)
-    df_list = df.values.tolist()
-    for i in df_list:
-        insert_query_with_param = "INSERT INTO BB300(exp_ID, Name, dp0_tol, dp0_dev, dp0_ref, dp0_meas, " \
-                                  "dp0__of_points, dp1_tol, dp1_dev, dp1_ref, dp1_meas, dp1__of_points, lp_tol, " \
-                                  "lp_dev, lp_ref, lp_meas, lp__of_points, Date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?," \
-                                  "?,?,?,?) "
-        cursor.execute(insert_query_with_param, i)
-        conn.commit()
-    messagebox.showinfo("Message", "Inserted to BB300 table successfully.\n\n".join([str(x) for x in df_list]))
+# Insert datas from the merged CSV in BB500 table
+def insert_data_to_table_BB500(path_csv_file):
+    try:
+        conn = sqlite3.connect(path_database)
+        c = conn.cursor()
+        df = pd.read_csv(path_csv_file)
+        df_col_list = []
+        for col in df.columns:
+            df_col_list.append(col)
+        column_string = ''
+        for col in df_col_list:
+            column_string = column_string + '''"''' + col + '''"''' + ', '
+        column_string = column_string[:-2]
+        values_string = '?,' * len(df_col_list)[:-1]
+        df_list = df.values.tolist()
+        for i in df_list:
+            c.execute("INSERT INTO csv_bb500(" + column_string + ") VALUES (" + values_string + ")", i)
+            conn.commit()
+        print("Insert Data: Successfully inserted to BB500 table!\n\n")
+        messagebox.showinfo(application_title, "Inserted to BB500 table successfully.\n\n")
+    except:
+        print("Insert Data: Failed to insert to BB500 table!")
+        messagebox.showerror(application_title, "Insert Data: Failed to insert to BB500 table!\n\n")
 
 
 # Insert datas from the merged CSV in BA500 table
-def insert_table_BA500(data):
-    conn = sqlite3.connect('db.db')
-    cursor = conn.cursor()
-    df = pd.read_csv(data)
-    df_list = df.values.tolist()
-    print(df_list)
-    for i in df_list:
-        insert_query_with_param = "INSERT INTO BA500('experiment_ID','Name','01-02_Tol','01-02_Dev','01-02_Ref_Value'," \
-                                  "'01-02_Meas_Value','01-02__Of_Points','01-03_Tol','01-03_Dev','01-03_Ref_Value'," \
-                                  "'01-03_Meas_Value','01-03__Of_Points','01-04_Tol','01-04_Dev','01-04_Ref_Value'," \
-                                  "'01-04_Meas_Value','01-04__Of_Points','01-05_Tol','01-05_Dev','01-05_Ref_Value'," \
-                                  "'01-05_Meas_Value','01-05__Of_Points','01-06_Tol','01-06_Dev','01-06_Ref_Value'," \
-                                  "'01-06_Meas_Value','01-06__Of_Points','01-07_Tol','01-07_Dev','01-07_Ref_Value'," \
-                                  "'01-07_Meas_Value','01-07__Of_Points','01-08_Tol','01-08_Dev','01-08_Ref_Value'," \
-                                  "'01-08_Meas_Value','01-08__Of_Points','01-09_Tol','01-09_Dev','01-09_Ref_Value'," \
-                                  "'01-09_Meas_Value','01-09__Of_Points','01-10_Tol','01-10_Dev','01-10_Ref_Value'," \
-                                  "'01-10_Meas_Value','01-10__Of_Points','01-11_Tol','01-11_Dev','01-11_Ref_Value'," \
-                                  "'01-11_Meas_Value','01-11__Of_Points', 'Date') VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?," \
-                                  "?,?,?,?,?," \
-                                  "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
-        cursor.execute(insert_query_with_param, i)
-        conn.commit()
-        messagebox.showinfo("Message", "Inserted to BA500 table successfully.\n\n".join([str(x) for x in df_list]))
+def insert_data_to_table_BA500(path_csv_file):
+    try:
+        conn = sqlite3.connect(path_database)
+        c = conn.cursor()
+        df = pd.read_csv(path_csv_file)
+        df_col_list = []
+        for col in df.columns:
+            df_col_list.append(col)
+        column_string = ''
+        for col in df_col_list:
+            column_string = column_string + '''"''' + col + '''"''' + ', '
+        column_string = column_string[:-2]
+        values_string = '?,' * len(df_col_list)[:-1]
+        df_list = df.values.tolist()
+        for i in df_list:
+            c.execute("INSERT INTO csv_bb500(" + column_string + ") VALUES (" + values_string + ")", i)
+            conn.commit()
+        print("Insert Data: Successfully inserted to BA500 table!\n\n")
+        messagebox.showinfo(application_title, "Insert Data: Failed to insert to BA500 table!\n\n")
+    except:
+        print("Insert Data: Failed to insert to BA500 table!")
+        messagebox.showerror(application_title, "Insert Data: Failed to insert to BB500 table!\n\n")
+
+
+# Insert the experience to the database.
+def insert_content(content, experience_id):
+    try:
+        if content != '\n' and experience_id != '':
+            conn = sqlite3.connect(path_database)
+            cursor = conn.cursor()
+            insert_query_with_param = """UPDATE experiences SET content = ? WHERE experience_id = ?"""
+            data = (content, experience_id)
+            cursor.execute(insert_query_with_param, data)
+            conn.commit()
+            messagebox.showinfo(main.application_title, "Insert Content: Success to insert content to the experience!\n\n\t"
+                                "%s\n%s" % (experience_id, content))
+        elif content == "\n" and experience_id == '':
+            messagebox.showerror(main.application_title, "Insert Content: Failed to insert content to the experience!"
+                                                         "\n\nContent is empty and experience ID has not been found.")
+        elif experience_id == '' and content != '\n':
+            messagebox.showerror(main.application_title, "Insert Content: Failed to insert content to the experience!"
+                                                         "\n\nExperience ID has not been found.")
+        elif content == "\n" and experience_id != '':
+            messagebox.showerror(main.application_title, "Insert Content: Failed to insert content to the experience!"
+                                                         "\n\nContent is empty.")
+    except:
+        print('Insert Content: Failed to insert content to the experience!')
+        messagebox.showerror(main.application_title, "Insert Content: Failed to insert content to the experience!")
