@@ -28,6 +28,7 @@ def open_db():
     elif check_process_running is True:
         messagebox.showerror(main.application_title, "Tool is already running.")
 
+
 def get_ids(department, operator, experience_type, artefact_type, certificate_no):
     conn = sqlite3.connect(path_database)
     conn.row_factory = lambda cursor, row: row[0]
@@ -66,7 +67,7 @@ def insert_experience(device_sn, operator, department, experience_type, artefact
         print('Insert Experience: Successfully inserted to database!')
     except:
         print('Insert Experience: Failed to insert to database!')
-        messagebox.showerror(application_title,'Insert Experience: Failed to insert to database!')
+        messagebox.showerror(application_title, 'Insert Experience: Failed to insert to database!')
 
 
 # Get the operators from database to list them in the first page.
@@ -328,7 +329,8 @@ def insert_content(content, experience_id):
             data = (content, experience_id)
             cursor.execute(insert_query_with_param, data)
             conn.commit()
-            messagebox.showinfo(main.application_title, "Insert Content: Success to insert content to the experience!\n\n\t"
+            messagebox.showinfo(main.application_title,
+                                "Insert Content: Success to insert content to the experience!\n\n\t"
                                 "%s\n%s" % (experience_id, content))
         elif content == "\n" and experience_id == '':
             messagebox.showerror(main.application_title, "Insert Content: Failed to insert content to the experience!"

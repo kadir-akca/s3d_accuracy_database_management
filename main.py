@@ -2,7 +2,7 @@ import os.path
 import tkinter as tk
 import xml.dom.minidom
 from datetime import datetime
-from tkinter import LEFT, ttk, END, messagebox
+from tkinter import LEFT, ttk, END, messagebox, NW, N
 import tkinter.filedialog as fd
 
 import pyperclip
@@ -39,11 +39,12 @@ class DatabaseManagement(tk.Frame):
 
         button_frame = tk.Frame(self)
         container = tk.Frame(self)
-        button_frame.pack(side="bottom", fill="x", expand=False)
-        container.pack(side="top", fill="both", expand=True)
+        button_frame.pack(side="bottom", fill="both", expand=False)
+        container.pack(side="top", fill="both", expand=True, anchor=N)
 
-        p1.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
-        p2.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
+        p1.place(in_=container, x=190, y=0, anchor=N, relheight=1)
+        p2.place(in_=container, x=190, y=0, anchor=N, relheight=1)
+        # p2.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
 
         button_first_page = tk.Button(button_frame, text='New Experience', command=p1.show)
         button_second_page = tk.Button(button_frame, text='Store Results', command=lambda: p2.show())
@@ -127,7 +128,7 @@ class PageClassOne(PageClass):
         self.label_log = tk.Label(self, textvariable=self.label_log_str, text='csv')
         self.label_log.grid(row=13, column=0, columnspan=3, padx=5, pady=5, sticky="NSEW")
 
-        label_device_sn = tk.Label(self, text="Device Serial Number:")
+        label_device_sn = tk.Label(self, text="Device Serial No.:")
         label_device_sn.grid(row=1, column=0)
         label_operator = tk.Label(self, text="Operator")
         label_operator.grid(row=3, column=0)
@@ -135,9 +136,9 @@ class PageClassOne(PageClass):
         label_department.grid(row=2, column=0)
         label_experience_type = tk.Label(self, text="Experience Type:")
         label_experience_type.grid(row=4, column=0)
-        label_artefact_type = tk.Label(self, text="Artefact Serial No:")
+        label_artefact_type = tk.Label(self, text="Artefact Type:")
         label_artefact_type.grid(row=5, column=0)
-        label_certificate_sn = tk.Label(self, text="Certificate No:")
+        label_certificate_sn = tk.Label(self, text="Certificate No.:")
         label_certificate_sn.grid(row=6, column=0)
         label_subject = tk.Label(self, text="Subject:")
         label_subject.grid(row=7, column=0)
@@ -147,9 +148,8 @@ class PageClassOne(PageClass):
         self.button_fill_xml = tk.Button(self, text='Fill with XML', command=lambda: self.get_data_from_xml())
         self.button_fill_xml.grid(row=8, column=0, padx=5, pady=5, columnspan=3, sticky="NSEW")
 
-        '''self.b_generate_experience_id = tk.Button(self, text='Generate Experience ID',
-                                                  command=lambda: self.generate_experience_id())
-        self.b_generate_experience_id.grid(row=9, column=2, padx=5, pady=5, sticky="NSEW")'''
+        self.button_reset = tk.Button(self, command=lambda: self.reset_fields(), text='Reset All')
+        self.button_reset.grid(row=12, column=0, columnspan=3, padx=5, pady=5, sticky="NSEW")
 
         self.button_copy = tk.Button(self, text='Copy', command=lambda: self.copy_experience_id())
         self.button_copy.grid(row=10, column=2, padx=5, pady=5, sticky="NSEW")
@@ -159,14 +159,13 @@ class PageClassOne(PageClass):
         self.button_create_experience.grid(row=9, column=0, columnspan=3, padx=5, pady=5, sticky="NSEW")
 
         '''button_add_operator = tk.Button(self, text='Add operator', command=lambda: self.add_ops())
-        button_add_operator.grid(row=2, column=2, padx=5, pady=5, sticky="NSEW")'''
+        button_add_operator.grid(row=2, column=2, padx=5, pady=5, sticky="NSEW")
 
-        self.button_reset = tk.Button(self, command=lambda: self.reset_fields(), text='Reset All')
-        self.button_reset.grid(row=12, column=0, columnspan=3, padx=5, pady=5, sticky="NSEW")
+        self.b_generate_experience_id = tk.Button(self, text='Generate Experience ID',
+                                                          command=lambda: self.generate_experience_id())
+        self.b_generate_experience_id.grid(row=9, column=2, padx=5, pady=5, sticky="NSEW")'''
 
     def generate_log(self, log):
-        """old_log = self.label_log_str.get()
-        new_log = old_log + '\n\n' + log"""
         self.label_log_str.set(log)
 
     # Method: insert entries to database
@@ -194,8 +193,8 @@ class PageClassOne(PageClass):
             print('Database: Failed to insert experience in database!')
             self.generate_log('Database: Failed to insert experience in database!')
 
-    '''# New window: to add new operator
-    def add_operator(self):
+    # New window: to add new operator
+    '''def add_operator(self):
         window_add_user = tk.Toplevel(root)
         window_add_user.title('Add new operator')
         window_add_user.geometry('190x200')
@@ -383,7 +382,6 @@ class PageClassOne(PageClass):
         self.entry_device_sn.delete(0, END)
         self.entry_experience_id.delete(0, END)
         self.text_subject.delete(1.0, END)
-        # self.b_generate_experience_id.config(state='normal')
         self.button_create_experience.config(state='normal')
         self.button_copy.config(state='normal')
         self.generate_log('All entries have been reset!')
@@ -433,7 +431,8 @@ class PageClassTwo(PageClass):
                                     text='Save XML')
         button_save_xml.grid(row=3, column=0, columnspan=3, padx=5, pady=5, sticky="NSEW")
 
-        '''sep_1 = ttk.Separator(self, orient='horizontal')
+        '''
+        sep_1 = ttk.Separator(self, orient='horizontal')
         sep_1.grid(row=3, column=0, columnspan=4, sticky="NSEW", pady=10, padx=5)
 
         b_select_asc_files = tk.Button(self, command=lambda: self.select_asc(), text='Select ASC files')
@@ -455,7 +454,8 @@ class PageClassTwo(PageClass):
 
         b_start_batch = tk.Button(self, command=lambda: self.start_batch(), text='Start Batch')
         b_start_batch.grid(row=5, column=3, rowspan=3, padx=5, pady=5, ipadx=5, ipady=2, sticky="NSEW")
-'''
+        '''
+
         separator_1 = ttk.Separator(self, orient='horizontal')
         separator_1.grid(row=8, column=0, columnspan=3, padx=5, pady=10, sticky="NSEW")
 
@@ -534,8 +534,6 @@ class PageClassTwo(PageClass):
         database.insert_content(self.text_content.get('1.0', END), self.cbb_experience_id.get())
 
     def generate_log(self, log):
-        '''old_log = self.label_log_str.get()
-        new_log = old_log + '\n\n' + log'''
         self.label_log_str.set(log)
 
     # Field that will be done in future
@@ -578,7 +576,7 @@ class PageClassTwo(PageClass):
 if __name__ == '__main__':
     root = tk.Tk()
     main = DatabaseManagement(root)
-    main.pack(side='top', fill='both', expand=True)
+    main.pack(side='bottom', fill='both', expand=True)
     root.wm_title('Database Management Tool for Accuracy Tests')
-    root.wm_geometry("380x800")
+    root.geometry("380x800+100+100")
     root.mainloop()
