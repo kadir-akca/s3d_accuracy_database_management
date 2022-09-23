@@ -1,16 +1,17 @@
 import os.path
+import logging
+import os.path
 import tkinter as tk
+import tkinter.filedialog as fd
 import xml.dom.minidom
 from datetime import datetime
-from tkinter import LEFT, ttk, END, messagebox, NW, N
-import tkinter.filedialog as fd
+from tkinter import LEFT, ttk, END, messagebox, N
 
 import pyperclip
 
 import database
 import fonts
 import methods
-import logging
 
 g_xml_url = ''
 g_experience_id = ''
@@ -577,6 +578,6 @@ if __name__ == '__main__':
     root = tk.Tk()
     main = DatabaseManagement(root)
     main.pack(side='bottom', fill='both', expand=True)
-    root.wm_title('Database Management Tool for Accuracy Tests')
+    root.wm_title(application_title)
     root.geometry("380x800+100+100")
     root.mainloop()

@@ -9,12 +9,12 @@ import re
 path_data_to_be_merged = os.getcwd()
 
 try:
-    files_list = [f for f in os.listdir(path_data_to_be_merged) if
-                  os.path.isfile(os.path.join(path_data_to_be_merged, f)) if f.endswith('.csv')]
+    files_list_csv = [f for f in os.listdir(path_data_to_be_merged) if
+                      os.path.isfile(os.path.join(path_data_to_be_merged, f)) if f.endswith('.csv')]
 
-    experience_id = files_list[0][files_list[0].find("(") + 1:files_list[0].find(")")]
+    experience_id = files_list_csv[0][files_list_csv[0].find("(") + 1:files_list_csv[0].find(")")]
 
-    df_orj = pd.read_csv(files_list[0], skiprows=1, header=None)
+    df_orj = pd.read_csv(files_list_csv[0], skiprows=1, header=None)
 
     col_names = []
     for i in range(df_orj.shape[1] - 1):
@@ -36,10 +36,10 @@ try:
         columns=new_cols
     )
 
-    for file in files_list:
+    for file in files_list_csv:
         path = path_data_to_be_merged + file
         df_temp = pd.read_csv(file, skiprows=1, header=None)
-        datas = [experience_id, "Project_" + str(files_list.index(file))]
+        datas = [experience_id, "Project_" + str(files_list_csv.index(file))]
         for j in range(df_temp.shape[1] - 1):
             for i in range(df_temp.shape[0] - 1):
                 data = df_temp.iloc[i + 1, j + 1]
@@ -51,7 +51,10 @@ try:
         )
         df1 = pd.concat([df1, df2])
 
-    date = time.ctime(os.path.getmtime(files_list[0]))
+    files_list_asc = [f for f in os.listdir(path_data_to_be_merged) if
+                      os.path.isfile(os.path.join(path_data_to_be_merged, f)) if f.endswith('.asc')]
+
+    date = time.ctime(os.path.getmtime(files_list_asc[0]))
     df1['date'] = date
 
     df1.to_csv(experience_id + ".csv", index=False)
